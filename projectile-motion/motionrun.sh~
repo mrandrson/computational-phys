@@ -1,0 +1,19 @@
+#!/bin/bash
+
+arg1=$1  # Correct assignment without spaces
+
+# Compile the C program with the math library
+gcc -o out motionsim.c -lm
+
+# Check if compilation was successful
+if [ $? -eq 0 ]; then
+    echo "Compilation successful. Running the program..."
+    ./out "$arg1"  # Correctly pass the argument to the executable
+else
+    echo "Compilation failed."
+    exit 1  # Exit the script if compilation failed
+fi
+
+# Run the Python plotting script
+python3 motionplot.py
+
