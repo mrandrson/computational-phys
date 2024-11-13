@@ -72,7 +72,6 @@ plt.show()
 '''
 
 ##Animation##
-'''
 fig, ax = plt.subplots()
 ax.set_xlim(-1.5, 1.5)
 ax.set_ylim(-1.5, 1.5)
@@ -99,10 +98,10 @@ def animate(i):
 
 ani = FuncAnimation(fig, animate, frames=N, init_func=init, blit=True, interval=1)
 plt.show()
-'''
+
 
 ##Energy Error Plot##
-
+'''
 def total_energy(theta, ptheta):
     kinetic_energy = ptheta**2 / (2 * m * l**2)
     potential_energy = m * g * l * (1 - np.cos(theta))
@@ -130,4 +129,4 @@ plt.ylabel("Relative Energy Error")
 plt.title("Relative Energy Error: Störmer-Verlet vs. Explicit Euler")
 plt.legend()
 plt.show()
-
+'''

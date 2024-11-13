@@ -4,9 +4,9 @@
 #include <hdf5.h>
 #include "rebound.h"
 
-// Declare file_id as a global variable
 hid_t file_id;
 const double c = 299792458.0;
+double a = 0.9; 
 
 void heartbeat(struct reb_simulation* r);
 void save_positions_to_hdf5(struct reb_simulation* r, int step);
@@ -14,28 +14,24 @@ void save_positions_to_hdf5(struct reb_simulation* r, int step);
 int main(int argc, char* argv[]){
     struct reb_simulation* r = reb_simulation_create();
 
-    // Starting the REBOUND visualization server
     reb_simulation_start_server(r, 1234);
 
-    // Setup constants
     r->integrator        = REB_INTEGRATOR_LEAPFROG;
     r->collision         = REB_COLLISION_TREE;
     r->collision_resolve = reb_collision_resolve_hardsphere;
     r->boundary          = REB_BOUNDARY_OPEN;
     r->G                 = 1;
     r->N_active          = 1;
-    r->softening         = 0.01;
+    r->softening         = 1e-3;
     r->dt                = 1e-3;
     r->heartbeat         = heartbeat;
 
     double boxsize = 4.8;
     reb_simulation_configure_box(r, boxsize, 1, 1, 1);
 
-    // Setup particles
     int _N = 1000;
-    // Initial conditions
     struct reb_particle star = {0};
-    star.m         = 1;
+    star.m         = 1e6;
     star.r         = 0.01;
     reb_simulation_add(r, star);
 
@@ -49,21 +45,17 @@ int main(int argc, char* argv[]){
         double vkep  = sqrt(r->G * star.m / a);
         pt.vx        =  vkep * sin(phi);
         pt.vy        = -vkep * cos(phi);
-        pt.m         = 0.0001;
+        pt.m         = 0;
         pt.r         = .3 / sqrt((double)_N);
         reb_simulation_add(r, pt);
     }
 
-    // Create HDF5 file for saving particle positions
     file_id = H5Fcreate("particle_positions.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-    // Run the simulation
     reb_simulation_integrate(r, INFINITY);
 
-    // Close HDF5 file
     H5Fclose(file_id);
 
-    // Cleanup
     reb_simulation_free(r);
 }
 
@@ -72,30 +64,43 @@ void heartbeat(struct reb_simulation* r){
     double G = r->G;
     double M = particles[0].m;
     double c_squared_inv = 1.0 / (c * c);
-    double c_fourth_inv = c_squared_inv * c_squared_inv;
+    double a = 0.9;  // Spin parameter for Kerr black hole
+    double B_field = 1e-2;
+    double jet_acceleration = 1e-1;  // Stronger jet acceleration for Kerr black hole
+    double schwarzschild_radius = 2 * G * M / (c * c);
+    double transition_radius = 5 * schwarzschild_radius;
+    double frame_drag_radius = 4 * schwarzschild_radius;  // Approximate region of strong frame dragging
 
     for (int i = 1; i < r->N; i++){
         double dx = particles[i].x - particles[0].x;
         double dy = particles[i].y - particles[0].y;
         double dz = particles[i].z - particles[0].z;
         double r = sqrt(dx*dx + dy*dy + dz*dz);
-        
-        // Newtonian gravitational force
-        double F_grav = -G * M / (r * r);
-        
-        // 1PN correction term
-        double F_1PN = F_grav * (3 * G * M / (r * c_squared_inv));
 
-        // 2PN correction term
-        double F_2PN = F_grav * (15 * (G * M) * (G * M) / (2 * r * r * c_fourth_inv));
+        // Gravitational forces (Paczyński-Wiita within transition radius)
+        if (r < transition_radius){
+            double F_pw = -G * M / ((r - schwarzschild_radius) * (r - schwarzschild_radius));
+            particles[i].ax += F_pw * dx / r;
+            particles[i].ay += F_pw * dy / r;
+            particles[i].az += F_pw * dz / r;
+        }
 
-        // Total modified force
-        double F_total = F_grav + F_1PN + F_2PN;
+        // Frame-dragging effect: add tangential velocity in the xy-plane
+        if (r < frame_drag_radius){
+            double v_theta = a * sqrt(G * M / r);  // Frame dragging velocity
+            particles[i].vx += -v_theta * dy / r;  // Perpendicular to radius
+            particles[i].vy += v_theta * dx / r;
+        }
 
-        // Apply the force in each direction
-        particles[i].ax += F_total * dx / r;
-        particles[i].ay += F_total * dy / r;
-        particles[i].az += F_total * dz / r;
+        // Magnetic jet force in polar regions
+        if (r < 3 * schwarzschild_radius && fabs(dz) > 1.5 * schwarzschild_radius) {
+            // Collimated jet along z-axis
+            if (dz > 0) {
+                particles[i].az += jet_acceleration;
+            } else {
+                particles[i].az -= jet_acceleration;
+            }
+        }
     }
 }
 
