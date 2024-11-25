@@ -1,0 +1,11 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     waveformregressionout
+relocations:
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x1000032E0, symSize: 0x4CC }
+  - { offsetInCU: 0x41, offset: 0x41, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x1000032E0, symSize: 0x4CC }
+  - { offsetInCU: 0x1CC, offset: 0x1CC, size: 0x8, addend: 0x0, symName: _load_data_from_csv, symObjAddr: 0x4CC, symBinAddr: 0x1000037AC, symSize: 0x2A4 }
+  - { offsetInCU: 0x275, offset: 0x275, size: 0x8, addend: 0x0, symName: _find_peaks, symObjAddr: 0x770, symBinAddr: 0x100003A50, symSize: 0x100 }
+  - { offsetInCU: 0x2ED, offset: 0x2ED, size: 0x8, addend: 0x0, symName: _erfc_convolution, symObjAddr: 0x870, symBinAddr: 0x100003B50, symSize: 0x110 }
+  - { offsetInCU: 0x3AF, offset: 0x3AF, size: 0x8, addend: 0x0, symName: _gaussian, symObjAddr: 0x980, symBinAddr: 0x100003C60, symSize: 0x7C }
+...

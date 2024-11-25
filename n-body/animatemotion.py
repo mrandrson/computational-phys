@@ -44,8 +44,7 @@ def update(step):
 
 ani = animation.FuncAnimation(fig, update, frames=num_steps, init_func=init, blit=True, interval=10)
 
-# Optional: Save the animation as a .mp4 or .gif file
-ani.save('n_body_simulation.mp4', writer='ffmpeg', fps=20)
+# ani.save('n_body_simulation.mp4', writer='ffmpeg', fps=20)
 
-# plt.show()
+plt.show()
 

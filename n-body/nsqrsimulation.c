@@ -108,14 +108,14 @@ void initialize_bodies(Body bodies[], int num_bodies, double rmin, double rmax) 
 
 
 int main() {
-    int num_bodies = 250; 
+    int num_bodies = 500; 
     int steps = 10000;   
     double h = 1.59*pow(10, 5);    
     
     Body bodies[num_bodies+1];
 
-    double rmin = 2.5*pow(10, 11);  
-    double rmax = 2.55*pow(10, 11);
+    double rmin = pow(10, 11);  
+    double rmax = 1.1*pow(10, 11);
 
     initialize_bodies(bodies, num_bodies, rmin, rmax);
     
@@ -124,7 +124,6 @@ int main() {
     bodies[num_bodies].position.y = 0.0;    
     bodies[num_bodies].momentum.x = 0.0;    
     bodies[num_bodies].momentum.y = 0.0;
-
     
     
     stormer_verlet(bodies, num_bodies+1, h, steps, "n_body_positions.csv");
