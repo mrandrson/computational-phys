@@ -112,20 +112,24 @@ class QuadTree:
             float: Contribution of the multipole term to the potential.
         """
         if order == 0:
+            ##Debugging Comment##
+            '''
+            print(f"Order: {order}, dx: {dx}, dy: {dy}, r2: {r2}, Term: {-G*self.total_mass / (r2**0.5)}")
+            '''
             return -G*self.total_mass / (r2**0.5)
         elif order == 1:
             return 0
         elif order == 2:
             r = r2**0.5
-            nx = dx / r  
-            ny = dy / r  
+            nx = dx / r
+            ny = dy / r
 
             Qxx = sum(
-                p[2] * (3 * (p[0] - self.center_of_mass_x)**2 - r2)
+                p[2] * (3 * (p[0] - self.center_of_mass_x)**2 - ((p[0] - self.center_of_mass_x)**2 + (p[1] - self.center_of_mass_y)**2))
                 for p in self.particles
             )
             Qyy = sum(
-                p[2] * (3 * (p[1] - self.center_of_mass_y)**2 - r2)
+                p[2] * (3 * (p[1] - self.center_of_mass_y)**2 - ((p[0] - self.center_of_mass_x)**2 + (p[1] - self.center_of_mass_y)**2))
                 for p in self.particles
             )
             Qxy = sum(
@@ -134,14 +138,15 @@ class QuadTree:
             )
 
             quad_term = (
-                0.5 * (Qxx * nx**2 + Qyy * ny**2 + 2 * Qxy * nx * ny) / r**3
-            )
+                (Qxx * nx**2 + Qyy * ny**2 + 2 * Qxy * nx * ny) -
+                (Qxx + Qyy)
+            ) / (2 * r**3)
+
+            ##Debugging Comment##
+            '''
+            print(f"Order: {order}, dx: {dx}, dy: {dy}, r2: {r2}, Term: {quad_term}")
+            '''
             return -G * quad_term
-            '''
-            return (
-                self.total_mass * (dx**2 - dy**2) / (2 * r2**2.5)
-            )  # Quadrupole term (simplified example)
-            '''
         else:
             raise NotImplementedError("Only up to second-order multipole terms are implemented.")
 
@@ -164,7 +169,6 @@ class QuadTree:
         distance = ((newpos[0] - self.center_of_mass_x)**2 + (newpos[1] - self.center_of_mass_y)**2)**0.5
 
         ang = size / distance if distance != 0 else float('inf')
-
         if len(self.children) == 0 or ang < theta_lim:
             if len(self.children) == 0:
                 potential = 0.0
@@ -175,6 +179,10 @@ class QuadTree:
                         potential -= G * p[2] / r
                 return potential
             else:
+                ##Debugging Print##
+                '''
+                print('Using Multipole Expansion')
+                '''
                 potential = 0.0
                 dx, dy = newpos[0] - self.center_of_mass_x, newpos[1] - self.center_of_mass_y
                 r2 = dx**2 + dy**2
@@ -218,8 +226,8 @@ class QuadTree:
                     r = r2**0.5
                     if r > 0:
                         a = -G * p[2] / r2
-                        ax -= a * dx / r
-                        ay -= a * dy / r
+                        ax += a * dx / r
+                        ay += a * dy / r
                 return ax, ay
             else:
                 ax, ay = 0.0, 0.0
@@ -229,27 +237,49 @@ class QuadTree:
                 for order in range(multipole_order + 1):
                     if order == 0:
                         a = -G * self.total_mass / r2
+                        ##Debugging Print##
+                        '''
+                        print(f'Monopole Acceleration: {a*dx/r}, {a*dy/r}')
+                        '''
                         ax += a * dx / r
                         ay += a * dy / r
                     elif order == 2:
-                        nx = dx / r
-                        ny = dy / r
                         Qxx = sum(
-                            p[2] * (3 * (p[0] - self.center_of_mass_x)**2 - r2)
+                            p[2] * (3 * (p[0] - self.center_of_mass_x)**2 - ((p[0] - self.center_of_mass_x)**2 + (p[1] - self.center_of_mass_y)**2))
                             for p in self.particles
                         )
                         Qyy = sum(
-                            p[2] * (3 * (p[1] - self.center_of_mass_y)**2 - r2)
+                            p[2] * (3 * (p[1] - self.center_of_mass_y)**2 - ((p[0] - self.center_of_mass_x)**2 + (p[1] - self.center_of_mass_y)**2))
                             for p in self.particles
                         )
                         Qxy = sum(
                             p[2] * 3 * (p[0] - self.center_of_mass_x) * (p[1] - self.center_of_mass_y)
                             for p in self.particles
                         )
-                        quad_term_x = 1.5 * (Qxx * nx + Qxy * ny) / r2
-                        quad_term_y = 1.5 * (Qxy * nx + Qyy * ny) / r2
-                        ax += -G * quad_term_x
-                        ay += -G * quad_term_y
+                        r2 = dx**2 + dy**2
+                        r = r2**0.5
+
+                        nx = dx / r
+                        ny = dy / r
+
+                        quad_term_x = 0
+                        quad_term_y = 0
+
+                        quad_term_x += 3 * (Qxx * nx**2 * nx + Qxy * nx**2 * ny + Qxy * ny**2 * nx + Qyy * ny**2 * nx)
+                        quad_term_y += 3 * (Qyy * ny**2 * ny + Qxy * ny**2 * nx + Qxy * nx**2 * ny + Qxx * nx**2 * ny)
+
+                        quad_term_x -= (Qxx + Qyy) * nx
+                        quad_term_y -= (Qxx + Qyy) * ny
+
+                        quad_term_x *= G / (r**5)
+                        quad_term_y *= G / (r**5)
+                        ##Debugging Comment##
+                        '''
+                        print(f"Quadrupole Moments: Qxx={Qxx}, Qyy={Qyy}, Qxy={Qxy}")
+                        print(f"Quadrupole Acceleration: {quad_term_x}, {quad_term_y}")
+                        '''
+                        ax += -quad_term_x
+                        ay += -quad_term_y
                 return ax, ay
 
         ax, ay = 0.0, 0.0
@@ -281,7 +311,7 @@ def directsum_acceleration(particles, newpos):
             a = -G * p[2] / r2
             ax += a * dx / r
             ay += a * dy / r
-    return -ax, -ay
+    return ax, ay
 
 
 def directsum(particles, newpos):
@@ -335,8 +365,9 @@ def plot_quadtree(tree, ax):
 
 numparticles = int(1e5)
 particles1 = initialize_particles(numparticles, center=(0, 0), rmin=1e10, rmax=1e11, mmin=1e20, mmax=1e25)
-particles2 = initialize_particles(numparticles, center=(2e11, 2e11), rmin =1e10, rmax=1e11, mmin = 1e15, mmax = 1e24)
-particles = particles1+particles2
+particles2 = initialize_particles(0, center=(5e11, 5e11), rmin =1e10, rmax=1e11, mmin = 1e20, mmax = 1e25)
+centralmass = initialize_particles(1, center=(0, 0), rmin = 1e-1, rmax =1, mmin = 1.989e30, mmax=2e30)
+particles = particles1+particles2+centralmass
 Nmax = numparticles*1e-1
 quadtree = QuadTree(particles, Nmax)
 ##Plot Quadtree##
@@ -366,25 +397,70 @@ plt.show()
 '''
 theta_limit = 0.1
 
-query_position = (-1e10, 2e11)
+positions=np.logspace(0, 15, 20)
+for i in range(len(positions)):
+    query_position = (-positions[i], positions[i])
 
-direct_potential = directsum(particles, query_position)
-print(f"Direct summation potential at {query_position}: {direct_potential}")
+    direct_potential = directsum(particles, query_position)
+    print(f"Direct summation potential at {query_position}: {direct_potential}")
 
-multipole_potential = quadtree.compute_potential(query_position, theta_limit)
-print(f"Multipole expansion potential at {query_position}: {multipole_potential}")
+    multipole_potential = quadtree.compute_potential(query_position, theta_limit)
+    print(f"Multipole expansion potential at {query_position}: {multipole_potential}")
 
-error = abs(direct_potential - multipole_potential) / abs(direct_potential)
-print(f"Relative error between direct and multipole expansion: {error:.2e}")
+    error = abs(direct_potential - multipole_potential) / abs(direct_potential)
+    print(f"Relative error between direct and multipole expansion: {error:.2e}")
 
-direct_ax, direct_ay = directsum_acceleration(particles, query_position)
-print(f"Direct summation acceleration at {query_position}: ({direct_ax:.3e}, {direct_ay:.3e})")
+    direct_ax, direct_ay = directsum_acceleration(particles, query_position)
+    print(f"Direct summation acceleration at {query_position}: ({direct_ax:.3e}, {direct_ay:.3e})")
 
-multipole_ax, multipole_ay = quadtree.compute_acceleration(query_position, theta_limit)
-print(f"Multipole expansion acceleration at {query_position}: ({multipole_ax:.3e}, {multipole_ay:.3e})")
+    multipole_ax, multipole_ay = quadtree.compute_acceleration(query_position, theta_limit)
+    print(f"Multipole expansion acceleration at {query_position}: ({multipole_ax:.3e}, {multipole_ay:.3e})")
 
-error_x = abs(direct_ax - multipole_ax) / abs(direct_ax) if direct_ax != 0 else 0
-error_y = abs(direct_ay - multipole_ay) / abs(direct_ay) if direct_ay != 0 else 0
-print(f"Relative error in acceleration (x): {error_x:.2e}")
-print(f"Relative error in acceleration (y): {error_y:.2e}")
+    error_x = abs(direct_ax - multipole_ax) / abs(direct_ax) if direct_ax != 0 else 0
+    error_y = abs(direct_ay - multipole_ay) / abs(direct_ay) if direct_ay != 0 else 0
+    print(f"Relative error in acceleration (x): {error_x:.2e}")
+    print(f"Relative error in acceleration (y): {error_y:.2e}")
+'''
+'''
+import numpy as np
+import matplotlib.pyplot as plt
+from concurrent.futures import ProcessPoolExecutor
+
+def compute_magnitude(point):
+    """Compute acceleration magnitude for a single grid point."""
+    i, j, x, y = point
+    query_position = (x, y)
+    ax, ay = quadtree.compute_acceleration(query_position, 0.1)
+    return i, j, np.sqrt(ax**2 + ay**2)
+
+if __name__ == '__main__':
+    x_min, x_max = -1.5e10, 1.5e10
+    y_min, y_max = -1.5e10, 1.5e10
+    grid_points = 35
+
+    x_vals = np.linspace(x_min, x_max, grid_points)
+    y_vals = np.linspace(y_min, y_max, grid_points)
+    X, Y = np.meshgrid(x_vals, y_vals)
+
+    grid_points_list = [(i, j, X[i, j], Y[i, j]) for i in range(grid_points) for j in range(grid_points)]
+
+    acceleration_magnitude = np.zeros_like(X)
+
+    with ProcessPoolExecutor(max_workers=16) as executor:
+        results = executor.map(compute_magnitude, grid_points_list)
+
+    for i, j, magnitude in results:
+        acceleration_magnitude[i, j] = magnitude
+
+    acceleration_magnitude[acceleration_magnitude == 0] = np.min(acceleration_magnitude[acceleration_magnitude > 0])
+
+    plt.figure(figsize=(8, 6))
+    contour = plt.contourf(X, Y, np.log10(acceleration_magnitude), levels=50, cmap='viridis')
+    cbar = plt.colorbar(contour, label='Log10 Acceleration Magnitude (m/s²)')
+    cbar.set_label('Log10 Acceleration Magnitude (m/s²)')
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.title('Logarithmic Acceleration Magnitude Over Grid')
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.show()
 '''
