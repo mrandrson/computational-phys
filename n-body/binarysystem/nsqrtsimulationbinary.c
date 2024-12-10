@@ -115,23 +115,25 @@ int main() {
     
     Body bodies[num_bodies+2];
 
-    double rmin = 1.55*pow(10, 11);  
+    double rmin = 4.55*pow(10, 11);  
     double rmax = 5*pow(10, 11);
 
     initialize_bodies(bodies, num_bodies, rmin, rmax);
     
-    bodies[num_bodies].mass = Msun;         
+    bodies[num_bodies].mass = Msun*10;         
     bodies[num_bodies].position.x = 0.0;   
     bodies[num_bodies].position.y = 0.0;    
     bodies[num_bodies].momentum.x = 0.0;    
     bodies[num_bodies].momentum.y = 0.0;
 
-    bodies[num_bodies+1].mass = 1.001*Msun;
+    bodies[num_bodies+1].mass = 1.001*Msun*10;
     bodies[num_bodies+1].position.x = pow(10, 12);
     bodies[num_bodies+1].position.y = 0.0;
     bodies[num_bodies+1].momentum.x = 0.0;
     bodies[num_bodies+1].momentum.y = sqrt(G * Msun * 1.9 / bodies[num_bodies+1].position.x) * bodies[num_bodies + 1].mass;
     
+    
+
     stormer_verlet(bodies, num_bodies+2, h, steps, "n_body_positions.csv");
 
     printf("Simulation complete. Positions saved to n_body_positions.csv\n");
