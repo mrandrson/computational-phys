@@ -1,5 +1,6 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -O2
+#CXXFLAGS = -std=c++17 -O2 -fopenmp
+CXXFLAGS = -std=c++17 -O2 -Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include -L/opt/homebrew/opt/libomp/lib -lomp
 EXEC = multipole
 SRC = main.cpp
 PYTHON_SCRIPT = plot_trajectories.py
